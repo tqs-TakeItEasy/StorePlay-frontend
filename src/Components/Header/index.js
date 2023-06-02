@@ -11,7 +11,7 @@ import {
   Input,
   Select,
 } from "antd";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CartContext } from "../CartContext";
 import axios from "axios";
@@ -52,20 +52,36 @@ function AppHeader() {
   );
 }
 
-const options = ["PickUp 1", "PickUp 2", "PickUp 3"];
-
 function AppCart() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
   const { cart, clearCart } = useContext(CartContext);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [pickupPoints, setPickupPoints] = useState([]);
+  const [response, setResponse] = useState(null);
+
+  const fetchData = () => {
+    try {
+      return axios
+        .get("http://localhost:8000/api/v1/pickuppoints/")
+        .then((response) => setPickupPoints(response.data));
+    } catch {
+      console.log("Deu pylance");
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSelectChange = (value) => {
     setSelectedOption(value);
   };
 
   const onConfirmOrder = (values) => {
-    console.log({ values });
     setCartDrawerOpen(false);
     setCheckoutDrawerOpen(false);
     const uniqueIds = cart.map((product) => product.id);
@@ -73,18 +89,24 @@ function AppCart() {
       clientName: values.name,
       clientEmail: values.email,
       storeId: 1,
-      pickupPointId: 1,
+      pickupPointId: selectedOption,
       packageItemsIds: uniqueIds,
     };
 
-    console.log(data);
-
     try {
-      axios.post("http://localhost:8000/api/v1/packages/add/", data);
-      message.success("Your order has been placed successfully.");
-      clearCart()
+      axios
+        .post("http://localhost:8000/api/v1/packages/add/", data)
+        .then((res) => {
+          console.log(res);
+          setResponse(res.data);
+          message.success(
+            "Your order has been placed successfully. Your Package Number is " +
+              res.data.deliveryId, 10
+          );
+          clearCart();
+        });
     } catch (error) {
-      console.log("Deu pylance");
+      console.log(error);
     }
   };
 
@@ -199,9 +221,9 @@ function AppCart() {
               onChange={handleSelectChange}
               placeholder="Select a category"
             >
-              {options.map((option) => (
-                <Select.Option key={option} value={option}>
-                  {option}
+              {pickupPoints.map((option) => (
+                <Select.Option key={option.id} value={option.id}>
+                  {option.name}
                 </Select.Option>
               ))}
             </Select>
