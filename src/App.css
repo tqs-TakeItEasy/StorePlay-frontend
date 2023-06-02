@@ -22,12 +22,6 @@
 .appMenu{
     border: none;
 }
-.pageContent{
-    display: flex;
-    flex: 1;
-    overflow-y: auto;
-    margin-top: 2px;
-}
 .appFooter{
     height: 60px;
     background-color: black;

@@ -1,16 +1,37 @@
 import {} from "antd";
-import { BrowserRouter } from "react-router-dom";
 import "./App.css";
 import AppHeader from "./Components/Header";
-import PageContent from "./Components/PageContent";
+import { Route, Routes } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+import Login from "./Components/Login/Login";
+import Products from "./Components/Products";
+import DeliveryStatus from "./Components/DeliveryStatus/DeliveryStatus";
 
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
-        <AppHeader />
-        <PageContent />
-      </BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" />}></Route>
+        <Route
+          path="/buy"
+          element={
+            <>
+              <AppHeader />
+              <Products />
+            </>
+          }
+        ></Route>
+        <Route
+          path="/checkStatus"
+          element={
+            <>
+              <AppHeader />
+              <DeliveryStatus />
+            </>
+          }
+        ></Route>
+        <Route path="/login" element={<Login />}></Route>
+      </Routes>
     </div>
   );
 }

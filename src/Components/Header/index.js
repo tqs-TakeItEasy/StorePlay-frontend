@@ -1,85 +1,48 @@
-import { HomeFilled, ShoppingCartOutlined } from "@ant-design/icons";
+import { ShoppingCartOutlined } from "@ant-design/icons";
 import {
-  Badge,
   Button,
-  Checkbox,
+  Badge,
   Drawer,
-  Form,
-  Input,
-  InputNumber,
   Menu,
   message,
   Table,
   Typography,
+  Form,
+  Input,
+  Select,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCart } from "../../API";
+import { CartContext } from "../CartContext";
+import axios from "axios";
 
 function AppHeader() {
   const navigate = useNavigate();
 
-  const onMenuClick = (item) => {
-    navigate(`/${item.key}`);
+  const handleMenuClick = (key) => {
+    // Handle menu item click based on the key
+    if (key === "checkStatus") {
+      navigate("/checkStatus");
+    } else if (key === "buy") {
+      navigate("/buy");
+    }
   };
+
+  const menuItems = [{ key: "checkStatus", title: "Check Status" }];
   return (
     <div className="appHeader">
       <Menu
         className="appMenu"
-        onClick={onMenuClick}
+        onClick={({ key }) => handleMenuClick(key)}
         mode="horizontal"
         items={[
           {
-            label: <HomeFilled />,
-            key: "",
+            label: <div>Check Status</div>,
+            key: "checkStatus",
           },
           {
-            label: "Men",
-            key: "men",
-            children: [
-              {
-                label: "Men's Shirts",
-                key: "mens-shirts",
-              },
-              {
-                label: "Men's Shoes",
-                key: "mens-shoes",
-              },
-              {
-                label: "Men's Watches",
-                key: "mens-watches",
-              },
-            ],
-          },
-          {
-            label: "Women",
-            key: "women",
-            children: [
-              {
-                label: "Women's Dresses",
-                key: "womens-dresses",
-              },
-              {
-                label: "Women's Shoes",
-                key: "womens-shoes",
-              },
-              {
-                label: "Women's Watches",
-                key: "womens-watches",
-              },
-              {
-                label: "Women's Bags",
-                key: "womens-bags",
-              },
-              {
-                label: "Women's Jewellery",
-                key: "womens-jewellery",
-              },
-            ],
-          },
-          {
-            label: "Fragrances",
-            key: "fragrances",
+            label: <div>Buy Toys</div>,
+            key: "buy",
           },
         ]}
       />
@@ -88,21 +51,51 @@ function AppHeader() {
     </div>
   );
 }
+
+const options = ["PickUp 1", "PickUp 2", "PickUp 3"];
+
 function AppCart() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
-  useEffect(() => {
-    getCart().then((res) => {
-      setCartItems(res.products);
-    });
-  }, []);
+  const { cart, clearCart } = useContext(CartContext);
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  const handleSelectChange = (value) => {
+    setSelectedOption(value);
+  };
+
   const onConfirmOrder = (values) => {
     console.log({ values });
     setCartDrawerOpen(false);
     setCheckoutDrawerOpen(false);
-    message.success("Your order has been placed successfully.");
+    const uniqueIds = cart.map((product) => product.id);
+    const data = {
+      clientName: values.name,
+      clientEmail: values.email,
+      storeId: 1,
+      pickupPointId: 1,
+      packageItemsIds: uniqueIds,
+    };
+
+    console.log(data);
+
+    try {
+      axios.post("http://localhost:8000/api/v1/packages/add/", data);
+      message.success("Your order has been placed successfully.");
+      clearCart()
+    } catch (error) {
+      console.log("Deu pylance");
+    }
   };
+
+  const itemCounts = cart.reduce((acc, item) => {
+    acc[item.id] = (acc[item.id] || 0) + 1;
+    return acc;
+  }, {});
+
+  const uniqueItems = Array.from(new Set(cart.map((item) => item.id))).map(
+    (itemId) => cart.find((item) => item.id === itemId)
+  );
 
   return (
     <div>
@@ -110,7 +103,7 @@ function AppCart() {
         onClick={() => {
           setCartDrawerOpen(true);
         }}
-        count={cartItems.length}
+        count={cart.length}
         className="soppingCartIcon"
       >
         <ShoppingCartOutlined />
@@ -127,8 +120,8 @@ function AppCart() {
           pagination={false}
           columns={[
             {
-              title: "Title",
-              dataIndex: "title",
+              title: "Name",
+              dataIndex: "name",
             },
             {
               title: "Price",
@@ -141,38 +134,21 @@ function AppCart() {
               title: "Quantity",
               dataIndex: "quantity",
               render: (value, record) => {
-                return (
-                  <InputNumber
-                    min={0}
-                    defaultValue={value}
-                    onChange={(value) => {
-                      setCartItems((pre) =>
-                        pre.map((cart) => {
-                          if (record.id === cart.id) {
-                            cart.total = cart.price * value;
-                          }
-                          return cart;
-                        })
-                      );
-                    }}
-                  ></InputNumber>
-                );
+                const itemCount = itemCounts[record.id] || 0;
+                return <span>{itemCount}</span>;
               },
             },
-            {
-              title: "Total",
-              dataIndex: "total",
-              render: (value) => {
-                return <span>{value}€</span>;
-              },
-            },
+            // Add more columns as needed
           ]}
-          dataSource={cartItems}
+          dataSource={uniqueItems}
           summary={(data) => {
             const total = data.reduce((pre, current) => {
-              return pre + current.total;
+              return (
+                pre +
+                parseFloat(current.price) * parseFloat(itemCounts[current.id])
+              );
             }, 0);
-            return <span>Total: {total}€</span>;
+            return <span>Total: {total.toFixed(2)}€</span>;
           }}
         />
         <Button
@@ -183,6 +159,7 @@ function AppCart() {
         >
           Checkout Your Cart
         </Button>
+        {/* Rest of the code */}
       </Drawer>
       <Drawer
         open={checkoutDrawerOpen}
@@ -200,7 +177,7 @@ function AppCart() {
               },
             ]}
             label="Full Name"
-            name="full_name"
+            name="name"
           >
             <Input placeholder="Enter your full name.." />
           </Form.Item>
@@ -213,36 +190,27 @@ function AppCart() {
               },
             ]}
             label="Email"
-            name="your_name"
+            name="email"
           >
             <Input placeholder="Enter your email.." />
           </Form.Item>
-          <Form.Item
-            rules={[
-              {
-                required: true,
-                message: "Please enter your address",
-              },
-            ]}
-            label="Address"
-            name="your_address"
-          >
-            <Input placeholder="Enter your full address.." />
-          </Form.Item>
           <Form.Item>
-            <Checkbox defaultChecked disabled>
-              Cash on Delivery
-            </Checkbox>
+            <Select
+              onChange={handleSelectChange}
+              placeholder="Select a category"
+            >
+              {options.map((option) => (
+                <Select.Option key={option} value={option}>
+                  {option}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
-          <Typography.Paragraph type="secondary">
-            More methods coming soon
-          </Typography.Paragraph>
           <Button type="primary" htmlType="submit">
-            {" "}
             Confirm Order
           </Button>
         </Form>
-      </Drawer>
+      </Drawer>{" "}
     </div>
   );
 }

@@ -1,146 +1,69 @@
-import {
-  Button,
-  Card,
-  Image,
-  List,
-  message,
-  Typography,
-  Select,
-} from "antd";
-import { useEffect, useState } from "react";
-import { addToCart, getAllProducts, getProductsByCategory } from "../../API";
-import { useParams } from "react-router-dom";
+import React, { useContext, useEffect, useState } from 'react';
+import { Button, Card, Image, List, Typography } from 'antd';
+import axios from 'axios';
+import { CartContext } from '../CartContext';
 
 function Products() {
   const [loading, setLoading] = useState(false);
-  const param = useParams();
-  const [items, setItems] = useState([]);
-  const [sortOrder, setSortOrder] = useState("az");
-  useEffect(() => {
-    setLoading(true);
-    (param?.categoryId
-      ? getProductsByCategory(param.categoryId)
-      : getAllProducts()
-    ).then((res) => {
-      setItems(res.products);
-      setLoading(false);
-    });
-  }, [param]);
+  const [products, setProducts] = useState([]);
+  const { cart, addToCart } = useContext(CartContext);
 
-  const getSortedItems = () => {
-    const sortedItems = [...items];
-    sortedItems.sort((a, b) => {
-      const aLowerCaseTitle = a.title.toLowerCase();
-      const bLowerCaseTitle = b.title.toLowerCase();
-
-      if (sortOrder === "az") {
-        return aLowerCaseTitle > bLowerCaseTitle
-          ? 1
-          : aLowerCaseTitle === bLowerCaseTitle
-          ? 0
-          : -1;
-      } else if (sortOrder === "za") {
-        return aLowerCaseTitle < bLowerCaseTitle
-          ? 1
-          : aLowerCaseTitle === bLowerCaseTitle
-          ? 0
-          : -1;
-      } else if (sortOrder === "lowHigh") {
-        return a.price > b.price ? 1 : a.price === b.price ? 0 : -1;
-      } else if (sortOrder === "highLow") {
-        return a.price < b.price ? 1 : a.price === b.price ? 0 : -1;
-      }
-    });
-    return sortedItems;
+  const fetchData = () => {
+    try {
+      return axios.get('http://localhost:8000/api/v1/items/').then((response) => setProducts(response.data));
+    } catch {
+      console.log('Deu pylance');
+    }
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const logCartContent = setInterval(() => {
+      console.log('Cart:', cart);
+    }, 1000);
+
+    return () => {
+      clearInterval(logCartContent);
+    };
+  }, [cart]);
+
 
   return (
     <div className="productsContainer">
-      <div>
-        <Typography.Text>View Items Sorted By: </Typography.Text>
-        <Select
-          onChange={(value) => {
-            setSortOrder(value);
-          }}
-          defaultValue={"az"}
-          options={[
-            {
-              label: "Alphabetically a-z",
-              value: "az",
-            },
-            {
-              label: "Alphabetically z-a",
-              value: "za",
-            },
-            {
-              label: "Price Low to High",
-              value: "lowHigh",
-            },
-            {
-              label: "Price High to Low",
-              value: "highLow",
-            },
-          ]}
-        ></Select>
-      </div>
       <List
         loading={loading}
         grid={{ column: 3 }}
         renderItem={(product, index) => {
           return (
-              <Card
-                className="itemCard"
-                title={product.title}
-                key={index}
-                cover={
-                  <Image className="itemCardImage" src={product.thumbnail} />
+            <Card
+              className="itemCard"
+              title={product.name}
+              key={index}
+              cover={<Image className="itemCardImage" src={product.profilePicture} />}
+              actions={[
+                <Button onClick={() => addToCart(product)}>Add to Cart</Button> // Pass the product object to addToCart
+              ]}
+            >
+              <Card.Meta
+                title={
+                  <Typography.Paragraph>
+                    Price: {product.price}€
+                  </Typography.Paragraph>
                 }
-                actions={[
-                  <AddToCartButton item={product} />,
-                ]}
-              >
-                <Card.Meta
-                  title={
-                    <Typography.Paragraph>
-                      Price: {product.price}€
-                    </Typography.Paragraph>
-                  }
-                  description={
-                    <Typography.Paragraph
-                      ellipsis={{ rows: 2, expandable: true, symbol: "more" }}
-                    >
-                      {product.description}
-                    </Typography.Paragraph>
-                  }
-                ></Card.Meta>
-              </Card>
+              ></Card.Meta>
+            </Card>
           );
         }}
-        dataSource={getSortedItems()}
+        dataSource={products}
       ></List>
     </div>
   );
 }
 
-function AddToCartButton({ item }) {
-  const [loading, setLoading] = useState(false);
-  const addProductToCart = () => {
-    setLoading(true);
-    addToCart(item.id).then((res) => {
-      message.success(`${item.title} has been added to cart!`);
-      setLoading(false);
-    });
-  };
-  return (
-    <Button
-      type="link"
-      onClick={() => {
-        addProductToCart();
-      }}
-      loading={loading}
-    >
-      Add to Cart
-    </Button>
-  );
-}
 export default Products;
