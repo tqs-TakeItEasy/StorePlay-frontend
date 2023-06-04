@@ -28,6 +28,17 @@ function AppHeader() {
     }
   };
 
+  const items = [
+    {
+      label: <div>Check Status</div>,
+      key: "checkStatus",
+    },
+    {
+      label: <div>Buy Toys</div>,
+      key: "buy",
+    },
+  ];
+
   const menuItems = [{ key: "checkStatus", title: "Check Status" }];
   return (
     <div className="appHeader">
@@ -35,20 +46,11 @@ function AppHeader() {
         className="appMenu"
         onClick={({ key }) => handleMenuClick(key)}
         mode="horizontal"
-        items={[
-          {
-            label: <div>Check Status</div>,
-            key: "checkStatus",
-          },
-          {
-            label: <div>Buy Toys</div>,
-            key: "buy",
-          },
-        ]}
+        items={items}
       />
-      <Typography.Title>Store Play</Typography.Title>
-      <AppCart />
-    </div>
+        <Typography.Title>Store Play</Typography.Title>
+        <AppCart />
+      </div>
   );
 }
 
@@ -101,7 +103,8 @@ function AppCart() {
           setResponse(res.data);
           message.success(
             "Your order has been placed successfully. Your Package Number is " +
-              res.data.deliveryId, 10
+              res.data.deliveryId,
+            10
           );
           clearCart();
         });
